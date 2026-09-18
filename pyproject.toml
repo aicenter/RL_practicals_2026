@@ -1,0 +1,39 @@
+[project]
+name = "rlcourse"
+version = "0.1.0"
+description = "Practicals for the Reinforcement Learning course at CTU"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "gymnasium[classic-control]>=1.0",  # classic-control pulls in pygame for rendering
+    "ipython",
+    "matplotlib",
+    "numpy",
+    "tensorboard",                      # logging used by CleanRL scripts
+    "torch>=2.6",
+    "tyro",                             # CLI argument parsing used by CleanRL scripts
+]
+
+[build-system]
+requires = ["uv_build>=0.9,<0.10"]
+build-backend = "uv_build"
+
+[tool.uv]
+# Platforms we lock and support. Intel Macs are excluded: PyTorch no longer
+# publishes wheels for them.
+environments = [
+    "sys_platform == 'linux'",
+    "sys_platform == 'win32'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+
+# Use CPU-only PyTorch on Linux and Windows. The default Linux wheels bundle
+# several GB of CUDA libraries that we don't need. macOS wheels from PyPI
+# already support Apple Silicon GPUs (MPS).
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform != 'darwin'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

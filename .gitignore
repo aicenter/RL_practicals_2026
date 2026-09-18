@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# uv / virtual environments
+.venv/
+
+# Experiment outputs (TensorBoard logs, saved models, videos)
+runs/
+videos/
+*.pt
+*.cleanrl_model
+
+# Editors / OS
+.vscode/
+.idea/
+.ipynb_checkpoints/
+.DS_Store
