@@ -8,13 +8,15 @@ from gymnasium import spaces
 class MinimalCorridor(gym.Env):
     def __init__(self, n_cells=8, slip=0.1):
 
-        self.n_cells, self.slip = n_cells, slip
-
         # Define gymnasium spaces:
         self.observation_space = spaces.Discrete(n_cells)
         self.action_space = spaces.Discrete(2)
 
-    def reset(self) -> int:
+        
+        self.n_cells, self.slip = n_cells, slip
+
+    def reset(self) -> Tuple[int, dict]:
+        # Just reset position to start cell
         self.pos = 0
         return self.pos, {}
 
@@ -25,7 +27,9 @@ class MinimalCorridor(gym.Env):
         if random.random() < self.slip:
             direction = -direction
 
+        # Add direction to position and clip to (0, n_cells-1)
         self.pos = min(max(self.pos + direction, 0), self.n_cells - 1)
+
         terminated = self.pos == self.n_cells - 1
 
         return self.pos, -1.0, terminated, False, {}
