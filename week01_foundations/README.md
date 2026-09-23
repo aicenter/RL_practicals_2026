@@ -71,7 +71,29 @@ Things to try:
   check_env(env, skip_render_check=True)
   ```
 
-## 2. Homework: implement your own environment
+## 2. Let an algorithm solve them
+
+The point of writing an environment against a standard API is that any RL
+algorithm can then be pointed at it. Two scripts do that here:
+
+- `random_baseline.py` runs a policy that picks actions uniformly at random
+  and reports its average return. That is the number to beat.
+- `ppo.py` trains an agent with PPO (Proximal Policy Optimization, which we
+  will meet properly in Week 9; for now it is a black box). It prints progress,
+  saves a learning curve to `runs/<run-name>/learning_curve.png`, and finally
+  prints one episode played by the trained agent.
+
+```bash
+uv run python week01_foundations/random_baseline.py --env week01_foundations.corridor:CorridorEnv
+uv run python week01_foundations/ppo.py --env week01_foundations.corridor:CorridorEnv
+uv run python week01_foundations/ppo.py --env week01_foundations.roomba:RoombaEnv
+uv run python week01_foundations/ppo.py --env week01_foundations.roomba:RoombaEnv --env-kwargs '{"reward": "cleanliness"}'
+```
+
+Watch what the trained Roomba does under each reward. Did it learn what the
+designer wanted, or what the designer wrote down?
+
+## 3. Homework: implement your own environment
 
 In the practical, your group turned an informal scenario into an MDP on paper.
 Now write it in Python:
@@ -84,7 +106,17 @@ Now write it in Python:
    randomness are enough. You can always add the rest of your design later.
 3. Play a few episodes by hand from the console, and make sure
    `check_env(env)` passes.
-4. In a short comment at the top of the file, write down what you left out of
+4. Point the two scripts from part 2 at it:
+
+   ```bash
+   uv run python week01_foundations/random_baseline.py --env my_env:MyEnv
+   uv run python week01_foundations/ppo.py --env my_env:MyEnv
+   ```
+
+   If your environment never truncates on its own, add
+   `--max-episode-steps 100` (or similar). Does the trained agent beat the
+   random one? Does it do what you intended?
+5. In a short comment at the top of the file, write down what you left out of
    your paper design and why, and whether your observation is Markov.
 
 The [Gymnasium guide to custom environments](https://gymnasium.farama.org/introduction/create_custom_env/)
