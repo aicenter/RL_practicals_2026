@@ -32,11 +32,11 @@ notes at the end.
 
 | Group | Problem classes | Algorithms | Play by hand |
 | --- | --- | --- | --- |
-| A1 | 1, 2 | ε-greedy, explore-then-commit | 2 |
-| A2 | 1, 3 | ε-greedy, explore-then-commit | 3 |
-| A3 | 4, 5 | ε-greedy, explore-then-commit | 4, 5 |
-| B1 | 2, 4 | Boltzmann, UCB | 2, 4 |
-| B2 | 3, 5 | Boltzmann, UCB | 3, 5 |
+| A1 | 1, 2 | ε-greedy, UCB | 2 |
+| A2 | 1, 3 | ε-greedy, UCB | 3 |
+| A3 | 4, 5 | ε-greedy, UCB | 4, 5 |
+| B1 | 2, 4 | explore-then-commit, Boltzmann | 2, 4 |
+| B2 | 3, 5 | explore-then-commit, Boltzmann | 3, 5 |
 
 ## Tasks
 
