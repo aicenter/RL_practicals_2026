@@ -70,6 +70,20 @@ def check_gymnasium() -> None:
     env.close()
 
 
+def check_bandits() -> None:
+    import gymnasium as gym
+
+    import rlcourse.envs  # noqa: F401
+
+    for problem in range(1, 6):
+        env = gym.make(f"rlcourse/Bandit{problem}-v0", horizon=20)
+        env.reset(seed=0)
+        truncated = False
+        while not truncated:
+            _, _, _, truncated, _ = env.step(env.action_space.sample())
+        env.close()
+
+
 def check_rendering() -> None:
     import gymnasium as gym
 
@@ -93,6 +107,7 @@ def main() -> int:
         ("Package imports", check_imports),
         ("PyTorch forward/backward pass", check_torch),
         ("Gymnasium environment step", check_gymnasium),
+        ("Course bandit environments", check_bandits),
     ]
     if args.render:
         checks.append(("Rendering window", check_rendering))
