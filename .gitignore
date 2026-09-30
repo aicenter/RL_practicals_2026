@@ -11,6 +11,8 @@ dist/
 # Experiment outputs (TensorBoard logs, saved models, videos)
 runs/
 videos/
+# Hand-play records (week02_bandits/play.py)
+week02_bandits/results/
 *.pt
 *.cleanrl_model
 
