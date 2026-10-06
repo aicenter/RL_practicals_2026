@@ -84,6 +84,13 @@ def check_bandits() -> None:
         env.close()
 
 
+def check_leaderboard() -> None:
+    from rlcourse.leaderboard import SERVER_URL, ping
+
+    ping()
+    print(f"{INFO} leaderboard server {SERVER_URL}")
+
+
 def check_rendering() -> None:
     import gymnasium as gym
 
@@ -108,6 +115,7 @@ def main() -> int:
         ("PyTorch forward/backward pass", check_torch),
         ("Gymnasium environment step", check_gymnasium),
         ("Course bandit environments", check_bandits),
+        ("Leaderboard server reachable (needs internet)", check_leaderboard),
     ]
     if args.render:
         checks.append(("Rendering window", check_rendering))

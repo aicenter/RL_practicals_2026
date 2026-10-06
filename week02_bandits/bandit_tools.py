@@ -46,6 +46,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import rlcourse.envs  # noqa: F401  (registers the bandit environments)
+from rlcourse import leaderboard
 
 TUNE_SEEDS = range(0, 200)
 TEST_SEEDS = range(10_000, 11_000)
@@ -61,7 +62,11 @@ TUNED_REGRET = {
     "UCB":               {1: 67.2, 2: 67.9, 3: 57.5, 4: 132.5, 5: 79.0},
 }
 REFERENCE_REGRET = TUNED_REGRET["UCB"]      # the yardstick for the overall score
-FINAL_CACHE = Path(__file__).parent / "results" / "final_evaluation.json"
+WEEK_DIR = Path(__file__).parent
+FINAL_CACHE = WEEK_DIR / "results" / "final_evaluation.json"
+# The files you edit this week. The final evaluation uploads them to the course
+# leaderboard, as a record of your work (we may look at them and give feedback).
+SUBMITTED_FILES = ("agents.py",)
 
 
 def make_env(problem: int, horizon: int = HORIZON) -> gym.Env:
@@ -342,12 +347,17 @@ def final_evaluation(our_problems: Sequence[int]) -> None:
           "a benchmark or a reward model and then used in situations they were not tuned for.\n"
           "Was your prediction right? What would you change, knowing this?")
 
-    history.append({"time": datetime.datetime.now().isoformat(timespec="seconds"),
-                    "our_problems": list(our_problems),
-                    "agents": {n: repr(a) for n, a in final.items()},
-                    "results": results, "report": report})
+    entry = {"time": datetime.datetime.now().isoformat(timespec="seconds"),
+             "our_problems": list(our_problems),
+             "agents": {n: repr(a) for n, a in final.items()},
+             "results": results, "transfer": transfer, "report": report,
+             "override": bool(history)}
+    history.append(entry)
     FINAL_CACHE.parent.mkdir(exist_ok=True)
     FINAL_CACHE.write_text(json.dumps(history, indent=1))
+    print()
+    leaderboard.submit(WEEK_DIR, "final", {k: v for k, v in entry.items() if k != "report"},
+                       files=[WEEK_DIR / f for f in SUBMITTED_FILES])
 
 
 if __name__ == "__main__":

@@ -49,8 +49,13 @@ notes at the end.
    as low as possible:
 
    ```bash
-   uv run python week02_bandits/play.py 2 --name yourname
+   uv run python week02_bandits/play.py 2 --name yournickname
    ```
+
+   Your games go to the class leaderboard under your nickname and group. The
+   first time, you will be asked for your group's password for this week (we
+   give it to you in class); it is remembered on your computer. If the
+   leaderboard can't be reached, your results are kept and sent later.
 
    Every call plays your next round. Round *k* is the same bandit, with the
    same luck, for everybody, so you can compare. Then see how you did against
@@ -133,8 +138,10 @@ notes at the end.
      ```
 
      Read the whole print-out. Was your prediction right?
-   - Submit your `agents.py` as instructed in class: we will run all groups'
-     final agents against each other on secret seeds.
+   - The final evaluation also submits your results and your `agents.py` to
+     the class leaderboard (as a record of your work; we may look at it and
+     give feedback). We will also run all groups' final agents against each
+     other on secret seeds.
    - Super-group discussion (5 min), then each group has 2 minutes: the best
      hyperparameters for each of your classes, which algorithm won where, and
      one thing that surprised you.

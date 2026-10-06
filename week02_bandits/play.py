@@ -23,7 +23,8 @@ from pathlib import Path
 
 import numpy as np
 
-from bandit_tools import make_env, run_episode
+from bandit_tools import WEEK_DIR, make_env, run_episode
+from rlcourse import leaderboard
 
 RESULTS = Path(__file__).parent / "results" / "handplay.csv"
 PLAY_SEED_BASE = 5_000
@@ -95,6 +96,10 @@ def play(problem: int, name: str, horizon: int, round_: int) -> None:
                      actions=" ".join(map(str, actions)),
                      time=datetime.datetime.now().isoformat(timespec="seconds")))
     print(f"Saved to {RESULTS}.")
+    leaderboard.submit(WEEK_DIR, "handplay",
+                       {"problem": problem, "round": round_, "seed": seed, "horizon": horizon,
+                        "regret": regret, "total_reward": total, "actions": actions},
+                       nickname=name)
 
 
 def algorithm_regrets(problem: int, horizon: int, seeds: list[int]) -> dict[str, float]:
@@ -140,7 +145,8 @@ def summary() -> None:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("problem", type=int, nargs="?", choices=[1, 2, 3, 4, 5])
-    ap.add_argument("--name", default="anonymous")
+    ap.add_argument("--name", default=None,
+                    help="your nickname (shown on the class leaderboard, so a nickname is fine)")
     ap.add_argument("--horizon", type=int, default=50)
     ap.add_argument("--round", type=int, default=None,
                     help="which round to play (default: your next unplayed one)")
@@ -151,6 +157,8 @@ if __name__ == "__main__":
     elif args.problem is None:
         ap.error("give a problem class (1-5) or --summary")
     else:
+        while not args.name:
+            args.name = input("Your nickname for the leaderboard: ").strip()
         played = {int(r["round"]) for r in load_results()
                   if r["name"] == args.name and int(r["problem"]) == args.problem
                   and int(r["horizon"]) == args.horizon}
