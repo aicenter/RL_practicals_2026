@@ -3,6 +3,7 @@
 You should not need to edit this file. Typical use, from the repository root:
 
     uv run python week02_bandits/bandit_tools.py     # sanity-check your agents
+    uv run python week02_bandits/bandit_tools.py --final --classes 1 2   # Task 5, run once
 
 and then either write your experiments in a script of your own inside
 week02_bandits/ (run it with `uv run python week02_bandits/my_script.py`), or
@@ -32,8 +33,12 @@ biased (the "winner's curse").
 
 from __future__ import annotations
 
+import argparse
+import datetime
+import json
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable, Iterable, Sequence
 
 import gymnasium as gym
@@ -46,6 +51,17 @@ TUNE_SEEDS = range(0, 200)
 TEST_SEEDS = range(10_000, 11_000)
 HORIZON = 1000
 PROBLEMS = (1, 2, 3, 4, 5)
+FINAL_SEEDS = range(20_000, 20_500)
+# Mean regret on FINAL_SEEDS of each basic algorithm with its hyperparameter tuned
+# separately for each problem class (by the instructors).
+TUNED_REGRET = {
+    "EpsilonGreedy":     {1: 89.7, 2: 118.5, 3: 70.5, 4: 141.6, 5: 85.5},
+    "ExploreThenCommit": {1: 182.8, 2: 176.9, 3: 117.9, 4: 222.6, 5: 80.8},
+    "Boltzmann":         {1: 84.7, 2: 95.3, 3: 66.8, 4: 130.6, 5: 100.9},
+    "UCB":               {1: 67.2, 2: 67.9, 3: 57.5, 4: 132.5, 5: 79.0},
+}
+REFERENCE_REGRET = TUNED_REGRET["UCB"]      # the yardstick for the overall score
+FINAL_CACHE = Path(__file__).parent / "results" / "final_evaluation.json"
 
 
 def make_env(problem: int, horizon: int = HORIZON) -> gym.Env:
@@ -231,5 +247,118 @@ def check_agents() -> None:
     print("'??' means: runs, but hardly better than random -- worth a second look.")
 
 
+# --- final evaluation (Task 5) -------------------------------------------------------
+
+def score(agent, problems: Sequence[int] = PROBLEMS, seeds: Iterable[int] = FINAL_SEEDS) -> dict:
+    """Regret on each problem, its ratio to REFERENCE_REGRET, and the geometric mean of the ratios.
+
+    The geometric mean treats a 2x improvement on any class the same, whatever that
+    class's regret scale; 1.0 means 'as good as a UCB tuned separately for each class'."""
+    seeds = list(seeds)
+    regret = {p: evaluate(agent, p, seeds).mean for p in problems}
+    ratio = {p: regret[p] / REFERENCE_REGRET[p] for p in problems}
+    return {"regret": regret, "ratio": ratio,
+            "score": float(np.exp(np.mean(np.log(list(ratio.values())))))}
+
+
+def _geomean(xs):
+    return float(np.exp(np.mean(np.log(xs)))) if xs else float("nan")
+
+
+def final_evaluation(our_problems: Sequence[int]) -> None:
+    import agents as A
+    final = A.final_agents()
+    if not final:
+        print("final_agents() in agents.py is still empty: fill in your final settings first.")
+        return
+
+    history = json.loads(FINAL_CACHE.read_text()) if FINAL_CACHE.exists() else []
+    if history:
+        last = history[-1]
+        print(f"You already ran the final evaluation on {last['time']} ({len(history)} run(s) so far). "
+              "Its results were:\n")
+        print(last["report"])
+        print("By default you are NOT supposed to run it again: the point is to see how choices made\n"
+              "*before* seeing these results hold up. Better results from a re-run will not affect\n"
+              "your grade in any way.")
+        try:
+            answer = input('Press Enter to abort. Type "OVERRIDE" to proceed: ')
+        except EOFError:
+            answer = ""
+        if answer.strip() != "OVERRIDE":
+            print("Aborted.")
+            return
+
+    unseen = [p for p in PROBLEMS if p not in our_problems]
+    print(f"Final evaluation of {', '.join(final)}.\n"
+          f"Each agent now runs on ALL FIVE problem classes -- including the {len(unseen)} you have not\n"
+          f"seen ({', '.join(map(str, unseen))}) -- with {len(FINAL_SEEDS)} new runs per class. "
+          f"This takes a minute or two.\n")
+    results = {}
+    for name, agent in final.items():
+        print(f"  {name} ...", flush=True)
+        results[name] = score(agent)
+
+    def table(title, ratios, note):
+        out = [title, ""]
+        out.append(f"{'':20s}" + "".join(
+            f"{'class ' + str(p) + ('*' if p in our_problems else ''):>10s}" for p in PROBLEMS)
+            + f"{'yours*':>9s}{'unseen':>9s}{'ALL':>8s}")
+        for name, rat in ratios.items():
+            if rat is None:
+                out.append(f"{name:20s}  (not one of the four basic algorithms)")
+                continue
+            out.append(f"{name:20s}" + "".join(f"{rat[p]:10.2f}" for p in PROBLEMS)
+                       + f"{_geomean([rat[p] for p in our_problems]):9.2f}"
+                       + f"{_geomean([rat[p] for p in unseen]):9.2f}"
+                       + f"{_geomean(list(rat.values())):8.2f}")
+        return out + [note, ""]
+
+    lines = [f"{'Mean regret':20s}" + "".join(f"{'class ' + str(p):>10s}" for p in PROBLEMS)]
+    for name, r in results.items():
+        lines.append(f"{name:20s}" + "".join(f"{r['regret'][p]:10.1f}" for p in PROBLEMS))
+    lines.append("")
+    lines += table("1) OVERALL SCORE: regret / regret of a UCB tuned separately for each class",
+                   {n: r["ratio"] for n, r in results.items()},
+                   "   Lower is better; 1.00 = as good as that UCB. 'ALL' is the overall score.")
+
+    def basic(agent):                       # the basic algorithm this agent is (derived from)
+        return next((c.__name__ for c in type(agent).__mro__ if c.__name__ in TUNED_REGRET), None)
+
+    transfer = {}
+    for name, agent in final.items():
+        b = basic(agent)
+        transfer[name] = (None if b is None else
+                          {p: results[name]["regret"][p] / TUNED_REGRET[b][p] for p in PROBLEMS})
+    lines += table("2) TRANSFER: regret / regret of the same algorithm tuned separately for each class",
+                   transfer,
+                   "   How much your single setting loses against the best setting for each class.\n"
+                   "   'yours*' and 'unseen' are geometric means over your classes and the other ones.")
+    report = "\n".join(lines)
+    print("\n" + report)
+    print("Compare 'yours*' with 'unseen' in table 2. Settings tuned on a few problems pick up their\n"
+          "particular quirks (here: reward scale, number of arms, noise) and can transfer worse than\n"
+          "expected. The same happens, at a much larger scale, when AI systems are optimized against\n"
+          "a benchmark or a reward model and then used in situations they were not tuned for.\n"
+          "Was your prediction right? What would you change, knowing this?")
+
+    history.append({"time": datetime.datetime.now().isoformat(timespec="seconds"),
+                    "our_problems": list(our_problems),
+                    "agents": {n: repr(a) for n, a in final.items()},
+                    "results": results, "report": report})
+    FINAL_CACHE.parent.mkdir(exist_ok=True)
+    FINAL_CACHE.write_text(json.dumps(history, indent=1))
+
+
 if __name__ == "__main__":
-    check_agents()
+    ap = argparse.ArgumentParser(description="Check your agents (default), or run the final evaluation.")
+    ap.add_argument("--final", action="store_true", help="final evaluation of final_agents() (Task 5)")
+    ap.add_argument("--classes", type=int, nargs="+", choices=PROBLEMS, default=[],
+                    help="the problem classes your group tuned on, e.g. --classes 1 2")
+    args = ap.parse_args()
+    if args.final:
+        if len(args.classes) != 2:
+            ap.error("please give your group's two problem classes, e.g. --final --classes 1 2")
+        final_evaluation(args.classes)
+    else:
+        check_agents()

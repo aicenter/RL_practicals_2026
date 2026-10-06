@@ -123,10 +123,18 @@ notes at the end.
 
 5. **Final choice and sharing** *(15 min)*.
    - In `final_agents()` at the bottom of `agents.py`, fill in **one** setting
-     per algorithm. We will run it on **all five** classes, including the three
-     you have never seen, on secret seeds, and score it relative to a UCB tuned
-     separately for each class. Before you submit, write down your predicted
-     rank. Submit your `agents.py` as instructed in class.
+     per algorithm: your best overall choice. Before running anything, write
+     down how well you expect each of your agents to do.
+   - Then run the final evaluation, **once**, with your group's two problem
+     classes:
+
+     ```bash
+     uv run python week02_bandits/bandit_tools.py --final --classes 1 2
+     ```
+
+     Read the whole print-out. Was your prediction right?
+   - Submit your `agents.py` as instructed in class: we will run all groups'
+     final agents against each other on secret seeds.
    - Super-group discussion (5 min), then each group has 2 minutes: the best
      hyperparameters for each of your classes, which algorithm won where, and
      one thing that surprised you.
@@ -146,11 +154,3 @@ notes at the end.
   into k blocks, average each block, and take the median of the averages.
 - **Optimism**: give `Greedy` optimistic initial values Q_0(a) (e.g. counting
   them as one fake observation). How good does plain greedy get, and why?
-
-## Food for thought
-
-Every group tunes its algorithms on two classes, and then we test them on all
-five. How well your choices carry over to classes you never saw is a small
-version of a big question in machine learning and AI safety: a system that is
-optimized hard against one benchmark tends to exploit the benchmark's quirks,
-and can be surprisingly fragile elsewhere.
