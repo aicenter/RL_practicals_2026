@@ -11,8 +11,10 @@ dist/
 # Experiment outputs (TensorBoard logs, saved models, videos)
 runs/
 videos/
-# Hand-play records (week02_bandits/play.py)
-week02_bandits/results/
+# Downloaded data sets (MNIST, ...)
+/data/
+# Local results of the weekly practicals (hand-play records, leaderboard login, ...)
+week*/results/
 *.pt
 *.cleanrl_model
 
