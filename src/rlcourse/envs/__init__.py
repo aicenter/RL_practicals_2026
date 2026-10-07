@@ -19,6 +19,14 @@ for _problem in range(1, 6):
         kwargs={"problem": _problem},
     )
 
+# Week 3: MNIST digits as a contextual bandit; problem 1 = digits, 2 = digits or pass.
+for _problem in (1, 2):
+    gym.register(
+        id=f"rlcourse/Digits{_problem}-v0",
+        entry_point="rlcourse.envs.digits:DigitBanditEnv",
+        kwargs={"problem": _problem},
+    )
+
 # TODO: register the Pacman environment once it exists, e.g.:
 # gym.register(
 #     id="rlcourse/Pacman-v0",

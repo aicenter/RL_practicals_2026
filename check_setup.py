@@ -84,6 +84,15 @@ def check_bandits() -> None:
         env.close()
 
 
+def check_mnist() -> None:
+    from rlcourse import mnist
+
+    mnist.download()                   # once: about 11 MB into data/
+    d = mnist.load()
+    mnist.features("pca")
+    print(f"{INFO} MNIST: {len(d['x_train'])} training and {len(d['x_test'])} test images")
+
+
 def check_leaderboard() -> None:
     from rlcourse.leaderboard import SERVER_URL, ping
 
@@ -115,6 +124,7 @@ def main() -> int:
         ("PyTorch forward/backward pass", check_torch),
         ("Gymnasium environment step", check_gymnasium),
         ("Course bandit environments", check_bandits),
+        ("MNIST data (downloads 11 MB the first time)", check_mnist),
         ("Leaderboard server reachable (needs internet)", check_leaderboard),
     ]
     if args.render:

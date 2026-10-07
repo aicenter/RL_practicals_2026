@@ -16,6 +16,7 @@ Intel Macs are not supported (see [Troubleshooting](#troubleshooting)).
 ├── uv.lock              # exact pinned versions, identical for everyone
 ├── check_setup.py       # verifies your installation
 ├── src/rlcourse/        # shared course code (e.g. the Pacman environment)
+├── data/                # downloaded data sets, e.g. MNIST (created automatically, not in git)
 └── week01_foundations/  # one directory per week of practicals
 ```
 
