@@ -50,8 +50,10 @@ Useful functions in `dp_tools` (all of them leave `model.backups` alone):
 
 - `gap(model, gamma, policy)`: max_s (V\*(s) − V_π(s)), how far a policy is from optimal in its
   worst state. A policy is *ε-optimal* if the gap is at most ε = 10⁻³.
-- `measure(solver, "maze")`: runs `solver(model, gamma, eps)` on a fresh model and returns
-  its backups, gap, `ok` (ε-optimal or not), and seconds.
+- `measure(solver, "maze")`: runs `solver(model, gamma, eps=...)` on a fresh model and returns
+  its backups, gap, `ok` (ε-optimal or not), and seconds. The solver may return the policy or a
+  tuple containing it, so `measure(dp.value_iteration, "maze")` works. If it reads `model.P`
+  (like policy iteration with exact evaluation), `used_P` is True and the backups miss that work.
 - `optimal(model, gamma)`: V\* and an optimal policy, for comparisons.
 - `outcomes(model, policy)`: how episodes end under a policy (goal, caught, never ending).
 - `plot_world(model, V, policy)`: values and policy on the map.
@@ -123,7 +125,7 @@ The same five groups as last week. Task 2 differs per group:
      S backups each) before improving again. k = 1 is value iteration; k → ∞ approaches policy
      iteration. Stop as in value iteration, on the T\* sweep. Plot backups against k (1, 2, 3,
      5, 10, 20, 50). Also measure policy iteration with *iterative* evaluation run to
-     convergence (you can't use the exact solve here: it needs `model.P`). Explain the
+     convergence (not the exact solve: its work would not show up in the backups). Explain the
      `pellets` result. Hint: what does the first policy, "UP everywhere", do?
    - **A3 -- In place, and in which order?** *Gauss–Seidel* value iteration: loop over the
      states and overwrite V[s] immediately (`model.expect(V, [s])[0]` gives the A expectations

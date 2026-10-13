@@ -43,8 +43,10 @@ from __future__ import annotations
 import argparse
 import datetime
 import functools
+import inspect
 import json
 import time
+import traceback
 from pathlib import Path
 from typing import Callable
 
@@ -162,6 +164,7 @@ class DPModel:
         self.rho0 = tm.rho0.copy()
         self._P = tm.P                     # shared with the cache below: do not modify
         self._hide_P = hide_P
+        self._P_reads = 0
         self.backups = 0
 
     @property
@@ -170,6 +173,7 @@ class DPModel:
         if self._hide_P:
             raise AttributeError("model.P is not available here: solve() may read the model "
                                  "only through model.expect (and model.R), which counts backups.")
+        self._P_reads += 1
         return self._P
 
     def expect(self, V: np.ndarray, states=None, actions=None) -> np.ndarray:
@@ -294,29 +298,52 @@ def gap(model: DPModel, gamma: float, policy) -> float:
     return float((V_star - _values(model, gamma, policy)).max())
 
 
+def _policy_of(result, n_states):
+    """The policy in what a solver returned: the policy itself, or a tuple containing it
+    (e.g. (V, policy, deltas) from value_iteration)."""
+    if not isinstance(result, tuple):
+        return np.asarray(result)
+    for item in result:
+        a = np.asarray(item)
+        if a.shape == (n_states,) and np.issubdtype(a.dtype, np.integer):
+            return a
+    raise TypeError("the solver returned a tuple without a policy (an integer array of shape (S,))")
+
+
 def measure(solver: Callable, world="maze", gamma: float | None = None,
-            eps: float = EPS, hide_P: bool = True, **overrides) -> dict:
-    """Run `solver(model, gamma, eps) -> policy` on a fresh model and report its cost.
+            eps: float = EPS, hide_P: bool = False, **overrides) -> dict:
+    """Run `solver(model, gamma)` on a fresh model and report its cost.
+
+    The solver returns a policy, or a tuple containing it -- so measure(dp.value_iteration)
+    and measure(dp.policy_iteration) both work. If the solver has a parameter named `eps`,
+    it is passed eps=eps.
 
     world: a name, a PragmanConfig (with gamma=...), or a DPModel (its counter is reset).
-    Returns a dict with backups, gap, ok (gap <= eps), and seconds."""
+    hide_P: switch model.P off, as in the final (default: off only there).
+    Returns a dict with backups, gap, ok (gap <= eps), seconds, and used_P (whether the
+    solver read model.P; if so, the backups do not include the work it did with it)."""
     if isinstance(world, DPModel):
         model = world
         if gamma is None:
             raise ValueError("pass gamma=... together with a model")
     else:
         model, gamma = load(world, gamma, **overrides)
-    model.backups, model._hide_P = 0, hide_P
+    try:
+        params = inspect.signature(solver).parameters
+        kwargs = {"eps": eps} if "eps" in params or any(
+            p.kind is p.VAR_KEYWORD for p in params.values()) else {}
+    except (TypeError, ValueError):            # e.g. a builtin without a signature
+        kwargs = {}
+    model.backups, model._P_reads, model._hide_P = 0, 0, hide_P
     t = time.perf_counter()
     try:
-        policy = solver(model, gamma, eps)
+        result = solver(model, gamma, **kwargs)
     finally:
         model._hide_P = False
     seconds = time.perf_counter() - t
-    if isinstance(policy, tuple):
-        raise TypeError("the solver must return just the policy (an integer array), not a tuple")
-    g = gap(model, gamma, np.asarray(policy))
-    return {"backups": model.backups, "gap": g, "ok": g <= eps, "seconds": seconds}
+    g = gap(model, gamma, _policy_of(result, model.n_states))
+    return {"backups": model.backups, "gap": g, "ok": g <= eps, "seconds": seconds,
+            "used_P": model._P_reads > 0}
 
 
 def _classify(model):
@@ -399,12 +426,36 @@ def _ok(cond, msg_ok, msg_bad):
     return bool(cond)
 
 
+def _todo_message(e: NotImplementedError, fallback: str) -> str:
+    """'function: message' for the todo(...) in dp.py that raised `e`."""
+    frames = [f for f in traceback.extract_tb(e.__traceback__)
+              if Path(f.filename).name == "dp.py" and f.name != "todo"]
+    where, msg = (frames[-1].name if frames else fallback), str(e)
+    return msg if msg.startswith(where) else f"{where}: {msg}" if msg else where
+
+
 def _todo(fn, *args, **kwargs):
+    """Call one of your functions; (result, True), or (None, False) if it is still a todo."""
     try:
         return fn(*args, **kwargs), True
-    except NotImplementedError:
-        print(f"  TODO  {fn.__name__} is not implemented yet")
+    except NotImplementedError as e:
+        print(f"  TODO  {_todo_message(e, fn.__name__)}")
         return None, False
+
+
+def _run_part(title: str, part: Callable) -> None:
+    """Run one part of the check; an error in your code fails this part only."""
+    print(title)
+    try:
+        part()
+    except Exception as e:                                      # noqa: BLE001
+        print(f"  FAIL  {type(e).__name__}: {e}")
+        frames = [f for f in traceback.extract_tb(e.__traceback__)
+                  if Path(f.filename).name == "dp.py"]
+        if frames:
+            f = frames[-1]
+            print(f"        in dp.py, line {f.lineno}, in {f.name}:  {(f.line or '').strip()}")
+    print()
 
 
 def check() -> None:
@@ -412,29 +463,29 @@ def check() -> None:
     rng = np.random.default_rng(0)
     print("Checking dp.py (Task 1). Each part is checked once its function is implemented.\n")
 
-    print("1. bellman_q")
-    model, gamma = load("maze")
-    V = rng.normal(size=model.n_states)
-    Q, done = _todo(dp.bellman_q, model, V, gamma)
-    if done:
-        _ok(np.shape(Q) == (model.n_states, model.n_actions) and
-            np.allclose(Q, model.R + gamma * model._P @ V),
-            "Q(s,a) = R(s,a) + gamma * sum_s' P(s'|s,a) V(s')",
-            "wrong values: Q(s,a) = R(s,a) + gamma * sum_s' P(s'|s,a) V(s'), shape (S, A)")
+    def part1():
+        model, gamma = load("maze")
+        V = rng.normal(size=model.n_states)
+        Q, done = _todo(dp.bellman_q, model, V, gamma)
+        if done:
+            _ok(np.shape(Q) == (model.n_states, model.n_actions) and
+                np.allclose(Q, model.R + gamma * model._P @ V),
+                "Q(s,a) = R(s,a) + gamma * sum_s' P(s'|s,a) V(s')",
+                "wrong values: Q(s,a) = R(s,a) + gamma * sum_s' P(s'|s,a) V(s'), shape (S, A)")
 
-    print("\n2. policy_evaluation (iterative) on the lecture's 4x4 gridworld, random policy, gamma = 1")
-    model, gamma = load("gridworld")
-    uniform = np.full((model.n_states, model.n_actions), 0.25)
-    out, done = _todo(dp.policy_evaluation, model, uniform, gamma, tol=1e-6)
-    if done:
-        V, sweeps = out
-        grid = np.zeros((4, 4))
-        for i, st in enumerate(model.states):
-            if not st.terminated:
-                grid[st.agent] = V[i]
-        _ok(np.allclose(grid, _SB_VALUES, atol=0.01),
-            f"reproduces Sutton & Barto's Figure 4.1 ({sweeps} sweeps):\n{np.round(grid, 1)}",
-            f"expected\n{_SB_VALUES}\ngot\n{np.round(grid, 2)}")
+    def part2():
+        model, gamma = load("gridworld")
+        uniform = np.full((model.n_states, model.n_actions), 0.25)
+        out, done = _todo(dp.policy_evaluation, model, uniform, gamma, tol=1e-6)
+        if done:
+            V, sweeps = out
+            grid = np.zeros((4, 4))
+            for i, st in enumerate(model.states):
+                if not st.terminated:
+                    grid[st.agent] = V[i]
+            _ok(np.allclose(grid, _SB_VALUES, atol=0.01),
+                f"reproduces Sutton & Barto's Figure 4.1 ({sweeps} sweeps):\n{np.round(grid, 1)}",
+                f"expected\n{_SB_VALUES}\ngot\n{np.round(grid, 2)}")
         m2, g2 = load("maze")
         pi = rng.integers(0, 4, m2.n_states)
         out2, done2 = _todo(dp.policy_evaluation, m2, pi, g2, tol=1e-10)
@@ -443,49 +494,58 @@ def check() -> None:
                 "a deterministic policy (array of actions) on the maze also works",
                 "wrong values for a deterministic policy given as an array of actions")
 
-    print("\n3. policy_evaluation_exact")
-    model, gamma = load("maze")
-    pi = rng.integers(0, 4, model.n_states)
-    V, done = _todo(dp.policy_evaluation_exact, model, pi, gamma)
-    if done:
-        _ok(np.allclose(V, _values(model, gamma, pi), atol=1e-8), "matches V_pi",
-            "does not match V_pi: solve (I - gamma P_pi) V = R_pi")
+    def part3():
+        model, gamma = load("maze")
+        pi = rng.integers(0, 4, model.n_states)
+        V, done = _todo(dp.policy_evaluation_exact, model, pi, gamma)
+        if done:
+            _ok(np.allclose(V, _values(model, gamma, pi), atol=1e-8), "matches V_pi",
+                "does not match V_pi: solve (I - gamma P_pi) V = R_pi")
 
-    print("\n4. value_iteration")
-    for name in ("maze", "ghost_lair"):
-        model, gamma = load(name)
-        out, done = _todo(dp.value_iteration, model, gamma, EPS)
-        if not done:
-            break
-        V, policy, deltas = out
-        g = gap(model, gamma, policy)
-        _ok(g <= EPS, f"{name}: eps-optimal policy after {len(deltas)} sweeps, "
-            f"{model.backups} backups (gap {g:.1e})",
-            f"{name}: policy is not eps-optimal (gap {g:.2e} > {EPS})")
+    def part4():
+        for name in ("maze", "ghost_lair"):
+            model, gamma = load(name)
+            out, done = _todo(dp.value_iteration, model, gamma, EPS)
+            if not done:
+                return
+            V, policy, deltas = out
+            g = gap(model, gamma, policy)
+            _ok(g <= EPS, f"{name}: eps-optimal policy after {len(deltas)} sweeps, "
+                f"{model.backups} backups (gap {g:.1e})",
+                f"{name}: policy is not eps-optimal (gap {g:.2e} > {EPS})")
 
-    print("\n5. policy_iteration")
-    for name in ("maze", "ghost_lair"):
-        model, gamma = load(name)
-        out, done = _todo(dp.policy_iteration, model, gamma)
-        if not done:
-            break
-        V, policy, iterations = out
-        g = gap(model, gamma, policy)
-        _ok(g <= 1e-8, f"{name}: optimal policy after {iterations} iterations",
-            f"{name}: policy is not optimal (gap {g:.2e})")
+    def part5():
+        for name in ("maze", "ghost_lair"):
+            model, gamma = load(name)
+            out, done = _todo(dp.policy_iteration, model, gamma)
+            if not done:
+                return
+            V, policy, iterations = out
+            g = gap(model, gamma, policy)
+            _ok(g <= 1e-8, f"{name}: optimal policy after {iterations} iterations",
+                f"{name}: policy is not optimal (gap {g:.2e})")
 
-    print("\n6. solve (Task 3), with model.P hidden, against plain value iteration")
-    for name in ("maze", "ghost_lair", "pellets"):
-        model, gamma = load(name)
-        ref = _reference_backups(model, gamma)
-        try:
-            r = measure(dp.solve, model, gamma)
-        except NotImplementedError:
-            print("  TODO  solve")
-            break
-        _ok(r["ok"], f"{name}: eps-optimal, {r['backups']} backups = "
-            f"{r['backups'] / ref:.2f} x plain VI ({r['seconds']:.1f} s)",
-            f"{name}: NOT eps-optimal (gap {r['gap']:.2e}); {r['backups']} backups")
+    def part6():
+        for name in ("maze", "ghost_lair", "pellets"):
+            model, gamma = load(name)
+            ref = _reference_backups(model, gamma)
+            try:
+                r = measure(dp.solve, model, gamma, hide_P=True)
+            except NotImplementedError as e:
+                msg = _todo_message(e, "solve")
+                print(f"  TODO  {msg}" if msg.startswith("solve") else f"  TODO  solve uses {msg}")
+                return
+            _ok(r["ok"], f"{name}: eps-optimal, {r['backups']} backups = "
+                f"{r['backups'] / ref:.2f} x plain VI ({r['seconds']:.1f} s)",
+                f"{name}: NOT eps-optimal (gap {r['gap']:.2e}); {r['backups']} backups")
+
+    _run_part("1. bellman_q", part1)
+    _run_part("2. policy_evaluation (iterative): the lecture's 4x4 gridworld, random policy, "
+              "gamma = 1; then a deterministic policy on the maze", part2)
+    _run_part("3. policy_evaluation_exact", part3)
+    _run_part("4. value_iteration", part4)
+    _run_part("5. policy_iteration", part5)
+    _run_part("6. solve (Task 3), with model.P hidden, against plain value iteration", part6)
 
 
 # --- Task 3: the final evaluation -----------------------------------------------------------
@@ -533,7 +593,7 @@ def final_evaluation() -> None:
         model = DPModel(factory(**overrides), name=name)
         ref = _reference_backups(model, gamma)
         try:
-            r = measure(dp.solve, model, gamma)
+            r = measure(dp.solve, model, gamma, hide_P=True)
             error = None
         except Exception as e:                                # a crash fails this world only
             r, error = {"backups": None, "gap": None, "ok": False, "seconds": None}, \
