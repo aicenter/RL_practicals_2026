@@ -27,9 +27,6 @@ for _problem in (1, 2):
         kwargs={"problem": _problem},
     )
 
-# TODO: register the Pacman environment once it exists, e.g.:
-# gym.register(
-#     id="rlcourse/Pacman-v0",
-#     entry_point="rlcourse.envs.pacman:PacmanEnv",
-#     max_episode_steps=500,
-# )
+# Weeks 4 onwards: the Pac-Man-like gridworld is its own package, `pragman`
+# (src/pragman/). Use `pragman.make("classic_11x11")`; `import pragman` also
+# registers Gymnasium ids such as "Pragman/Classic11x11-v0".

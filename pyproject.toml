@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "gymnasium[classic-control]>=1.0",  # classic-control pulls in pygame for rendering
+    "imageio",                            # GIFs of PragMan episodes
     "ipython",
     "matplotlib",
     "numpy",
@@ -17,6 +18,11 @@ dependencies = [
 [build-system]
 requires = ["uv_build>=0.9,<0.10"]
 build-backend = "uv_build"
+
+# Two importable packages: `rlcourse` (shared course code) and `pragman` (the
+# Pac-Man-like gridworld used from Week 4 on).
+[tool.uv.build-backend]
+module-name = ["rlcourse", "pragman"]
 
 [tool.uv]
 # Platforms we lock and support. Intel Macs are excluded: PyTorch no longer
@@ -37,3 +43,13 @@ torch = [{ index = "pytorch-cpu", marker = "sys_platform != 'darwin'" }]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: calibration tests (throughput, learnability); run with -m slow"]
+addopts = "-m 'not slow'"

@@ -33,6 +33,7 @@ def check_imports() -> None:
     import torch
 
     import rlcourse.envs  # noqa: F401
+    import pragman  # noqa: F401
 
     for mod in (numpy, torch, gymnasium, matplotlib):
         print(f"{INFO} {mod.__name__} {mod.__version__}")
@@ -84,6 +85,18 @@ def check_bandits() -> None:
         env.close()
 
 
+def check_pragman() -> None:
+    import pragman
+
+    env = pragman.make("classic_11x11")
+    env.reset(seed=0)
+    terminated = truncated = False
+    while not (terminated or truncated):
+        _, _, terminated, truncated, _ = env.step(env.action_space.sample())
+    env.close()
+    print(f"{INFO} PragMan model of empty_5x5: {pragman.make('empty_5x5').model.n_states} states")
+
+
 def check_mnist() -> None:
     from rlcourse import mnist
 
@@ -124,6 +137,7 @@ def main() -> int:
         ("PyTorch forward/backward pass", check_torch),
         ("Gymnasium environment step", check_gymnasium),
         ("Course bandit environments", check_bandits),
+        ("PragMan environment", check_pragman),
         ("MNIST data (downloads 11 MB the first time)", check_mnist),
         ("Leaderboard server reachable (needs internet)", check_leaderboard),
     ]

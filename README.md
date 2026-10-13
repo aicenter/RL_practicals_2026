@@ -15,7 +15,9 @@ Intel Macs are not supported (see [Troubleshooting](#troubleshooting)).
 ├── pyproject.toml       # dependencies
 ├── uv.lock              # exact pinned versions, identical for everyone
 ├── check_setup.py       # verifies your installation
-├── src/rlcourse/        # shared course code (e.g. the Pacman environment)
+├── src/rlcourse/        # shared course code (bandit environments, helpers)
+├── src/pragman/         # PragMan, the Pac-Man-like gridworld used from Week 4 on
+├── tests/               # tests of the course code (`uv run pytest`)
 ├── data/                # downloaded data sets, e.g. MNIST (created automatically, not in git)
 └── week01_foundations/  # one directory per week of practicals
 ```
@@ -135,5 +137,9 @@ course forum.
 - Course environments live in `src/rlcourse/envs/` and are registered with
   Gymnasium in `src/rlcourse/envs/__init__.py`. The package is installed in
   editable mode, so changes appear immediately after `git pull`.
+- PragMan is a second top-level package in the same project (`src/pragman/`,
+  listed in `[tool.uv.build-backend]` in `pyproject.toml`), so scripts simply
+  `import pragman`. Its documentation is `src/pragman/README.md`. Run its tests
+  with `uv run pytest` after changing it.
 - For students who can't use uv, you can generate a pip-compatible file with
   `uv export --no-hashes --no-emit-project -o requirements.txt`.
