@@ -20,7 +20,7 @@ class MinimalCorridor(gym.Env):
         self.pos = 0
         return self.pos, {}
 
-    def step(self, action) -> Tuple[int, float, bool, bool, dict]:
+    def step(self, action: int) -> Tuple[int, float, bool, bool, dict]:
 
         direction = 1 if action == 1 else -1
 

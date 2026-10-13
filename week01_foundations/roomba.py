@@ -14,6 +14,9 @@ Why this environment?
   best policy? (Hint: the flowerpot is an infinite source of reward.) With
   `reward="cleanliness"` it is instead penalised for every dirty cell in the room at every step.
   Same room, same robot, very different optimal behaviour: reward design *is* the task design.
+- *Sparse reward*. With `reward="sparse"` the robot gets +1 once, when the room is clean, and
+  nothing otherwise. That is the most honest description of the task, and the hardest to learn
+  from: nothing tells the robot it is getting warmer.
 - *Partial observability*. With `view="full"` the robot sees the whole room. With
   `view="local"` it only sees the 3x3 patch around itself, which is closer to a real robot
   and makes the observation non-Markov: it no longer knows where the remaining dirt is.
@@ -53,12 +56,12 @@ class RoombaEnv(gym.Env):
     def __init__(
         self,
         layout: str = DEFAULT_LAYOUT,
-        reward: str = "dirt_removed",  # or "cleanliness"
+        reward: str = "dirt_removed",  # or "cleanliness" or "sparse"
         view: str = "full",  # or "local"
         battery_capacity: int = 25,
         max_steps: int = 100,
     ):
-        assert reward in ("dirt_removed", "cleanliness")
+        assert reward in ("dirt_removed", "cleanliness", "sparse")
         assert view in ("full", "local")
         self.reward_mode = reward
         self.view = view
@@ -152,8 +155,10 @@ class RoombaEnv(gym.Env):
         # 4. Reward. This one choice decides what the "optimal" robot does.
         if self.reward_mode == "dirt_removed":
             reward = float(cleaned)
-        else:
+        elif self.reward_mode == "cleanliness":
             reward = -float(self.dirty.sum())
+        else:
+            reward = 1.0 if not self.dirty.any() else 0.0
 
         terminated = self.battery <= 0 or not self.dirty.any()
         truncated = self.t >= self.max_steps
@@ -209,7 +214,7 @@ def play(env: RoombaEnv) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--reward", choices=["dirt_removed", "cleanliness"], default="dirt_removed")
+    parser.add_argument("--reward", choices=["dirt_removed", "cleanliness", "sparse"], default="dirt_removed")
     parser.add_argument("--view", choices=["full", "local"], default="full")
     args = parser.parse_args()
     play(RoombaEnv(reward=args.reward, view=args.view))

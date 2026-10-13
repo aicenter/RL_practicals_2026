@@ -15,11 +15,15 @@ Why this environment?
   next step onwards. If the agent sees only the temperature, it cannot tell whether the heater is
   already on, so two identical observations may call for different actions. Try
   `ThermostatEnv(observe_heater=False)` and see whether you can control it well by hand.
+- *Reward shape*. With `reward="distance"` the agent is told at every step how far off it is.
+  With `reward="band"` it only learns whether it is within half a degree of the target (+1) or
+  not (-1): the same task, but much less information per step.
 
 Play it from the terminal:
 
     uv run python week01_foundations/thermostat.py                 # observation = (temperature, heater)
     uv run python week01_foundations/thermostat.py --hide-heater   # observation = temperature only
+    uv run python week01_foundations/thermostat.py --reward band   # coarse reward
 """
 
 import argparse
@@ -39,11 +43,14 @@ class ThermostatEnv(gym.Env):
         target: float = 21.0,
         outside: float = 10.0,
         observe_heater: bool = True,
+        reward: str = "distance",  # or "band"
         max_steps: int = 50,
     ):
+        assert reward in ("distance", "band")
         self.target = target
         self.outside = outside
         self.observe_heater = observe_heater
+        self.reward_mode = reward
         self.max_steps = max_steps
 
         # Physics constants: fraction of the temperature difference lost per step, degrees the
@@ -96,7 +103,10 @@ class ThermostatEnv(gym.Env):
         self.heater_on = action == ON
         self.t += 1
 
-        reward = -abs(self.temperature - self.target)
+        if self.reward_mode == "distance":
+            reward = -abs(self.temperature - self.target)
+        else:
+            reward = 1.0 if abs(self.temperature - self.target) <= 0.5 else -1.0
         terminated = False  # a thermostat's job is never "done"
         truncated = self.t >= self.max_steps
         return self._observation(), reward, terminated, truncated, {}
@@ -137,5 +147,6 @@ def play(env: ThermostatEnv) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--hide-heater", action="store_true", help="observe only the temperature")
+    parser.add_argument("--reward", choices=["distance", "band"], default="distance")
     args = parser.parse_args()
-    play(ThermostatEnv(observe_heater=not args.hide_heater))
+    play(ThermostatEnv(observe_heater=not args.hide_heater, reward=args.reward))

@@ -93,6 +93,12 @@ uv run python week01_foundations/ppo.py --env week01_foundations.roomba:RoombaEn
 Watch what the trained Roomba does under each reward. Did it learn what the
 designer wanted, or what the designer wrote down?
 
+Then try a *sparse* reward, which describes the task honestly but says nothing
+along the way: `{"reward": "sparse"}` pays the Roomba +1 only once the room is
+clean, and `{"reward": "band"}` tells the thermostat only whether it is within
+half a degree of the target. Compare the learning curves with the dense
+versions. How is an agent supposed to find a reward it never receives?
+
 ## 3. Homework: implement your own environment
 
 In the practical, your group turned an informal scenario into an MDP on paper.
