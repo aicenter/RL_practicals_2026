@@ -96,12 +96,12 @@ gamma)`, `plot_world(world, V)` (values, errors or visit counts on the map),
 ## Groups
 
 The same five groups as before. In each group, two of you take `td.py` and two take
-`control.py` (in a group of three, one person takes `td.py`). Task 4 differs per group:
+`control.py`. Task 4 differs per group:
 
 | Group | Task 4: the question you own |
 | --- | --- |
 | A1 | Step sizes: what do the Robbins–Monro conditions buy, and what does a constant α buy instead? |
-| A2 | What does TD(0) compute from a finite batch? (Proposition 5.2, and when it is wrong) |
+| A2 | What does TD(0) compute from a finite batch?  |
 | A3 | On-policy or off-policy: who learns the better policy, who earns more while learning? |
 | B1 | Exploration: GLIE, and why "greedy in the limit" takes so long |
 | B2 | Learning from somebody else's data: behaviour policy, target policy, coverage |
@@ -155,78 +155,54 @@ The same five groups as before. In each group, two of you take `td.py` and two t
    and which ends with the better greedy policy -- and why are these not the same agent?
    Write down a guess before Task 4; your question is one way of finding out.
 
-4. **Your question** *(the rest of the practical, then at home)*. Write your experiments in a
-   script of your own in this directory (e.g. `week05_td_control/a1.py`). Use several runs
-   (seeds) and show the spread; if two curves differ by less than their noise, say so.
-   Prepare **one plot and one sentence** for the class.
+4. **Your question** *(30 min, finish at home if needed)*. Write your experiments in a
+   script of your own in this directory (e.g. `week05_td_control/a1.py`). Each question is
+   one experiment with one plot; the bullets say what to measure, the questions say what to
+   explain. Use at least 5 runs (seeds) and show the spread. Prepare **one plot and one
+   sentence** for the class.
 
-   - **A1 -- Step sizes.** For TD(0) compare constant α (0.01, 0.03, 0.1, 0.3),
-     `one_over_n()` (α_n = 1/n), and `one_over_n(beta, c)` for β in 0.5, 0.6, 0.8 and c in
-     1, 2, 5, on `load("random_walk", size=19, left_reward=-1)` and `maze`, 2000 episodes,
-     log-log plots. Which schedules satisfy the Robbins–Monro conditions (lecture, Theorem
-     3.1)? Which is best early, which late? Why is 1/n, the sample mean, a poor choice for
-     TD(0) although it was the natural one for bandits -- what is V(s) an average *of*, and
-     does that quantity stay put? Constant α never converges: measure the error it settles at
-     as a function of α (predict the slope on a log-log plot before you measure it). Then
-     let the world change: 500 episodes of the tired policy, then 500 of
-     `load("maze", policy="optimal")`, measuring the error against the *current* policy's
-     values. Who keeps up? What does this mean for control, where the policy changes after
-     every update, and for deep RL, where everybody uses constant steps?
-   - **A2 -- What does TD(0) compute from a finite batch?** You have N episodes and may reuse
-     them as often as you like. Start from the lecture's Proposition 5.2: batch TD(0)
-     converges to the value function of the empirical model. Verify it beyond the checker,
-     on `maze` and `ghost_lair` for N = 5, 20, 100, 500: `BatchTD0(...).fit(eps)` against
-     `certainty_equivalence(eps, ...)`. How many sweeps does it take, and how does the step
-     size (≤ 1/max N(s), the proposition's condition) affect that? What happens with a larger
-     α? Now the online algorithm: how far is plain `TD0` after *one* pass over the same
-     episodes from the batch fixed point, and from the truth? After k passes with a decaying
-     α? Then break the proposition's assumption: `load("ghost_lair", observe="position")`
-     gives the learner only the agent's cell, not the ghost's. No table over cells can be
-     exact any more: `world.error(world.V_true)` is the best any estimator can do. How close
-     does batch TD(0) get, even with N = 2000, and why not closer? (The empirical model it
-     solves is a Markov chain over cells. Is the process over cells Markov?) In Week 7, V is
-     a neural network that cannot tell all states apart either.
-   - **A3 -- On-policy or off-policy?** The ghost's lair is our cliff: `load("ghost_lair")`.
-     Run SARSA, Expected SARSA and Q-learning with fixed ε in 0.02, 0.1, 0.3 (α = 0.3, then
-     0.1; a few thousand episodes, 10 runs). For each: the online return, the gap of the
-     greedy policy, and *which route* the greedy policy takes (`plot_policy`; or build a
-     `World` with the greedy policy as in `td_tools.policy_values` and ask `outcomes()` how
-     often it is caught). Who has the shortest route, who the best online return, and why are
-     these different agents? How does the answer depend on ε? Relate it to what each target
-     evaluates: the greedy policy, or the one that explores. Expected SARSA has the same
-     target *in expectation* as SARSA: compare the variance of their learning curves, and
-     their speed, against α. Which of the three would you run on a robot that breaks when
-     caught, and which in a simulator?
-   - **B1 -- Exploration and GLIE.** Start on `gridworld` and `maze`, then move to the lair.
-     Compare fixed ε = 0.1 with `glie(0.1, tau)` for τ in 30, 100, 300, 1000, for SARSA and
-     Q-learning: which converges to q_* (compare the whole table with `optimal_values`), and
-     which to something else -- the values of which policy? Which needs the decay at all?
-     Then watch the greedy policy of SARSA in the lair under the GLIE schedule for many
-     episodes: does it move to the short route as ε → 0, as the theorem promises? If not
-     (expect not), explain why: how often are the states on the short route visited once a
-     safe route is learned, and what would have to happen to their values for the policy to
-     move? "Nothing happens" is a legitimate finding here, if you can say why. Two remedies
-     to test: `start="random"` (exploring starts), and optimistic initialisation (`Q0=...`
-     at the largest value any pair can have; is Q0 = 0 already optimistic in this world?).
-     Which remedy works for which algorithm, and what does each assume that a robot does not
-     have?
-   - **B2 -- Learning from somebody else's data.** You get logged episodes of a *behaviour*
-     policy b and want a good policy without ever acting: `agent.learn_from(episode, eps)`.
-     On `maze`, log 2000 episodes of `policy="random"` and of `"tired"`, and let SARSA (with
-     `eps` = the behaviour's randomness) and Q-learning learn from them, several passes. What
-     does each table converge to -- compare with `optimal_values(world)` and with
-     `world.V_true` of the behaviour -- and how good is each greedy policy (`gap`)? Why can
-     the greedy policy of SARSA be nearly optimal although its table is not q_*? (Week 4 has
-     a theorem about one step of improvement.) Then shrink the coverage: in `ghost_lair`, log
-     `policy="risky"` with `tired` = 0.3, 0.1, 0.03, 0 (the behaviour takes the short route
-     more and more deterministically). Can Q-learning still find the safe route, and when
-     does it stop being able to? Count the (s, a) pairs it never saw (`agent.N == 0`). State
-     the coverage condition of the lecture in terms of what you observed. Finally the
-     *optional* part, the lecture's Section 6.5: implement `DoubleQLearning` in `control.py`
-     (the checker has a test) and run Q-learning against it on `load("maxbias")` with ε =
-     0.1, α = 0.1, 300 episodes, 200 runs: plot how often each takes LEFT from A over the
-     episodes (`res[...]["first_action"] == 1`; the optimal rate is ε/10). Why does Q-learning
-     go wrong first and recover later, and what does Double Q-learning change?
+   - **A1 -- Step sizes.** TD(0) on `load("random_walk", size=19, left_reward=-1)`, 2000
+     episodes, error against episodes on a log-log plot, for: constant α = 0.03, 0.1, 0.3;
+     `one_over_n()` (α_n = 1/n); `one_over_n(0.6)`. Which schedules satisfy the Robbins–Monro
+     conditions? Which wins early, which late? Why is 1/n, the sample mean that was perfect
+     for bandits, so poor for TD(0) -- what is V(s) averaging, and does that quantity stay
+     put? Where does each constant α settle, and how does that level depend on α?
+   - **A2 -- What does TD(0) compute from a finite batch?** On `maze`, for N = 5, 20, 100,
+     500 episodes: `BatchTD0(...).fit(eps)` against `certainty_equivalence(eps, ...)` (they
+     must agree) and against `world.V_true`; and plain `TD0` after one pass
+     over the same episodes. Plot the three errors against N. Then hide the ghost:
+     `load("ghost_lair", observe="position")`, N = 2000. `world.error(world.V_true)` is the
+     best any table over cells can do; how close does batch TD(0) get, and why not closer?
+     (It solves a Markov chain over cells. Is the process over cells Markov?)
+   - **A3 -- On-policy or off-policy?** `load("ghost_lair")` is our cliff. Run SARSA,
+     Expected SARSA and Q-learning with fixed ε = 0.1 (α = 0.3, 3000 episodes, 5 runs):
+     `plot_control(res, "return")` and `plot_control(res, "gap")`, and `plot_policy` of each
+     final table. Who has the shortest route, who the best online return, and why are these
+     different agents? Relate it to what each target evaluates. One extra run with ε = 0.3:
+     what changes?
+   - **B1 -- Exploration and GLIE.** SARSA and Q-learning on `maze`, 3000 episodes: fixed
+     ε = 0.1 against `glie(0.1, 300)`. For each, the RMS error of the whole table against q_*
+     from `optimal_values`, over episodes. Which algorithm converges to q_* under which
+     schedule, and what does the other one converge to? Then the same two schedules for SARSA
+     in `load("ghost_lair")`: does its greedy route move to the short one as ε → 0, as the
+     theorem promises? If not (expect not), count how often the states on the short route
+     are visited once a safe route is learned (`agent.N`), and explain. "Nothing happens" is a
+     legitimate finding here, if you can say why.
+   - **B2 -- Learning from somebody else's data.** Log 2000 episodes of `load("maze",
+     policy="random")` and let SARSA (`eps=1.0`) and Q-learning learn from them with
+     `agent.learn_from(episode, eps)`, three passes each. Compare both tables with q_* from
+     `optimal_values` and both greedy policies with `gap`. Which table is q_*, which is not,
+     and why is the greedy policy of the wrong table nearly optimal anyway (Week 4, one step
+     of improvement)? Then shrink the coverage: log `load("ghost_lair", policy="risky",
+     tired=t)` for t = 0.3 and 0.0 and let Q-learning learn. Does it find the safe route?
+     Count the pairs it never saw (`agent.N == 0`). State the coverage condition of the
+     lecture in terms of what you observed.
+
+   *Optional, for whoever finishes early* (any group): implement `DoubleQLearning` in
+   `control.py` (the checker has a test) and run it against Q-learning on `load("maxbias")`
+   (ε = 0.1, α = 0.1, 300 episodes, 200 runs). Plot how often each takes LEFT from A
+   (`res[...]["first_action"] == 1`; the optimal rate is ε/10). Why does Q-learning go wrong
+   first and recover later?
 
 ## Presentations and BRUTE
 
