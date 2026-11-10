@@ -16,6 +16,7 @@ Intel Macs are not supported (see [Troubleshooting](#troubleshooting)).
 ├── uv.lock              # exact pinned versions, identical for everyone
 ├── check_setup.py       # verifies your installation
 ├── src/rlcourse/        # shared course code (bandit environments, helpers)
+│   └── deeprl/          #   tools shared by the deep-RL weeks (7-9): world, networks, evaluation, runs
 ├── src/pragman/         # PragMan, the Pac-Man-like gridworld used from Week 4 on
 ├── tests/               # tests of the course code (`uv run pytest`)
 ├── data/                # downloaded data sets, e.g. MNIST (created automatically, not in git)
