@@ -42,8 +42,8 @@ def discounted_returns(rewards: np.ndarray, gamma: float) -> np.ndarray:
 
         G_t = rewards[t] + gamma * rewards[t+1] + gamma^2 * rewards[t+2] + ...
 
-    Hint: go backwards. G_{T-1} = rewards[T-1], and G_t = rewards[t] + gamma * G_{t+1}.
-    One loop, no powers of gamma needed."""
+    Hint: loop and backward recursion?"""
+
     return todo("G_t for every t, in one backward loop")
 
 
