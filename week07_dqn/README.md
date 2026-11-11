@@ -3,8 +3,9 @@
 Goal: Q-learning without the table. You will implement vanilla DQN (the network, experience
 replay, and the target network from the lecture), train it on a PragMan maze far too big for a
 table, and put it on the class leaderboard. Then each group adds one improvement from the
-"Rainbow" family and finds out whether it actually helps here, how much, and why. At the end we
-show our own runs of every improvement, and of all of them together.
+"Rainbow" family (and beyond) and finds out whether it actually helps here, how much, and why.
+After the deadline, the leaderboard also shows our own runs of every improvement, and of
+several of them together.
 
 Along the way: why does the agent believe the start of the maze is worth three times what it
 actually gets? How much of a difference between two runs is just the seed? And does an idea that
@@ -35,6 +36,7 @@ able to compare DQN with them.
 | File | What it is |
 | --- | --- |
 | `dqn.py` | **The file you edit**: the replay buffer, the agent, and the training loop; also the command line. |
+| `improvements/` | One page per improvement, in more detail than below: the idea, why it should help, how to fit it into `dqn.py`, and what to look at. Optional reading, but start there for Task 4. |
 | `results/` | Created by your runs: one `.json` per experiment (not in git). |
 
 The parts you don't need to edit are in the course package, `src/rlcourse/deeprl/`, which the
@@ -68,7 +70,7 @@ uv run python -m rlcourse.deeprl.plotting week07_dqn/results --metric overestima
 ```
 
 A training run prints a line every 10 000 steps for each seed: the return of the greedy policy on
-20 evaluation episodes, the pellets it ate, how often it died, and **V(s0) vs G0**: what the
+50 evaluation episodes, the pellets it ate, how often it died, and **V(s0) vs G0**: what the
 agent thinks the start is worth (max_a Q(s_0, a)), against the discounted return that actually
 followed. Three seeds of 100 000 steps take about 3 minutes on a laptop with four cores.
 
@@ -92,7 +94,7 @@ owns one improvement (Task 4):
 | --- | --- | --- |
 | A1 | Double DQN, and measuring overestimation | maximization bias (Week 6), Double DQN (Week 7) |
 | A2 | n-step returns | the n dial (Week 6) |
-| A3 | Dueling networks | Week 7, improvements |
+| A3 | Munchausen DQN | the max in the target (Week 7); softmax policies (Week 8, preview) |
 | B1 | Prioritized experience replay | importance sampling (Week 6), Week 7, improvements |
 | B2 | Noisy networks | exploration (Weeks 2–3), Week 7, backup slides |
 
@@ -144,6 +146,9 @@ owns one improvement (Task 4):
      (`uv run python -m rlcourse.deeprl.plotting week07_dqn/results`);
    - answer your group's questions below, with numbers.
 
+   Each improvement has its own page in [`improvements/`](improvements/), with the idea in more
+   detail, implementation hints, and the original paper.
+
    You may tune your improvement's own hyperparameters (and submit the variants: each gets its
    own row), but report what you tried. Leave the shared hyperparameters at their defaults for
    the main comparison.
@@ -166,13 +171,17 @@ owns one improvement (Task 4):
      week n = 1 won control in the tabular worlds; what is different with a network? The n-step
      return here is collected by the ε-greedy behaviour policy but used to learn about the
      greedy one: what bias does that introduce, and why does Rainbow get away with ignoring it?
-   - **A3 -- Dueling networks.** Replace the head of `QNetwork` with two: a value stream V(s)
-     (one output) and an advantage stream A(s, a) (one output per action), combined as
-     Q(s, a) = V(s) + A(s, a) − mean_a′ A(s, a′). Why subtract the mean (what would go wrong
-     without it)? Every update moves V(s), whichever action was taken: does that make learning
-     faster here? Look for states where the choice of action barely matters, and states where
-     it matters a lot: what does each stream say there? (Hint: `agent.q_network` can be called
-     on a board from `make_env().reset(...)`.)
+   - **A3 -- Munchausen DQN.** Two changes to the target, both in `td_targets`. First, replace
+     the hard max over next actions with a soft one: with the softmax policy
+     π(a | s) ∝ exp(Q(s, a; w⁻) / τ), bootstrap with Σ_a′ π(a′ | s′) [Q(s′, a′; w⁻) − τ ln π(a′ | s′)].
+     Second, add a bonus α · clip(τ ln π(a | s), −1, 0) to the reward, for the action a that
+     was taken (`F.log_softmax` computes ln π stably). τ = 0.03, α = 0.9, and the clip at −1
+     are the paper's values.
+     The bonus is never positive: for which actions is it zero, and for which is it most
+     negative? What does it do to the gap between the best action's value and the others'? How
+     does Munchausen compare with vanilla DQN on the **V(s0) vs G0** column (and with group A1's
+     Double DQN)? Is the final policy better, the learning faster, or both? What happens with
+     α = 0 (soft targets alone), and with a larger τ?
    - **B1 -- Prioritized experience replay.** Sample transition i with probability
      P(i) ∝ p_i^α, where p_i = |δ_i| + ε is its last TD error (new transitions get the largest
      priority so far), and correct the bias with importance-sampling weights
@@ -196,14 +205,11 @@ owns one improvement (Task 4):
 
    *Optional, for whoever finishes early* (any group): see the end of this page.
 
-## Presentations and BRUTE
+## What to hand in
 
-- **Presentations** at the start of next week's practical: 3 minutes per group, one plot and one
-  sentence, then questions -- to any member of the group, about any part of the work. After
-  them, we reveal our own runs of each improvement, and of all of them at once.
-- **BRUTE**, before next week's practical, each of you individually: a few sentences on your
-  group's improvement -- what you did, what you found (with at least one number and its
-  uncertainty), and why you think it happens.
+Your group's **leaderboard submissions**: the vanilla run (Task 3) and at least one run with
+your improvement (Task 4), before next week's practical. That is all; the questions above are
+for understanding what you see, so do discuss them in your group.
 
 ## If you have time left (or at home)
 
@@ -216,6 +222,6 @@ owns one improvement (Task 4):
   and run both together. Do the gains add up?
 - **Harder ghost.** `make_env(ghost_policy="chaser")` in `train` (not for the leaderboard).
   Which of the improvements helps most against a ghost that hunts you?
-- **Munchausen DQN** (Vieillard et al., 2020): a soft (entropy-regularized) target plus a
-  scaled log-policy bonus on the reward. Ten lines in `td_targets`; how does it compare with
-  Double DQN on overestimation?
+- **Dueling networks** ([`improvements/dueling.md`](improvements/dueling.md)): replace the head
+  of `QNetwork` with a value stream V(s) and an advantage stream A(s, a), combined as
+  Q(s, a) = V(s) + A(s, a) − mean_a′ A(s, a′). A dozen lines; does it change anything here?
