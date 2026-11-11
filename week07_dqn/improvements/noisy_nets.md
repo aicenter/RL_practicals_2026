@@ -1,4 +1,4 @@
-# Noisy networks (group B2)
+# Noisy networks (optional)
 
 **In one equation.** Replace a linear layer $y = W x + b$ by a *noisy* one,
 
@@ -80,8 +80,7 @@ We update only every 4 steps, so there are two reasonable readings:
 
 - **Resample only at updates.** This follows the general rule, and each perturbed policy is
   kept for 4 steps.
-- **Resample before every action as well.** This is what the README suggests, and closer to the
-  paper's DQN in effect.
+- **Resample before every action as well.** This is closer to the paper's DQN in effect.
 
 Pick one and say which.
 

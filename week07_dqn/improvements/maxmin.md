@@ -1,4 +1,4 @@
-# Maxmin Q-learning
+# Maxmin Q-learning (group A2)
 
 **In one equation.** Train $N$ Q-networks side by side, each with its own target network, and
 bootstrap from their *minimum*:

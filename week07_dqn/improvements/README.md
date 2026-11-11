@@ -13,13 +13,17 @@ here when you want to understand *why*, or when your implementation doesn't beha
 | Page | Group | What it changes | Where in `dqn.py` |
 | --- | --- | --- | --- |
 | [Double DQN](double_dqn.md) | A1 | which network chooses the next action in the target | `td_targets` |
-| [n-step returns](n_step.md) | A2 | what a transition in the buffer contains | `train`, `ReplayBuffer`, `td_targets` |
+| [Maxmin Q-learning](maxmin.md) | A2 | two networks; the target takes their minimum | `DQNAgent`, `td_targets`, `update` |
 | [Munchausen DQN](munchausen.md) | A3 | a soft max in the target, plus a bonus on the reward | `td_targets` |
-| [Prioritized replay](prioritized_replay.md) | B1 | which transitions are replayed, and with what weight | `ReplayBuffer`, `update`, `train` |
-| [Noisy networks](noisy_nets.md) | B2 | how the agent explores | `QNetwork`, `act`, `train` |
+| [Averaged-DQN](averaged_dqn.md) | B1 | the target averages several old target networks | `DQNAgent`, `sync_target`, `td_targets` |
+| [Evaluating averaged weights](averaged_weights.md) | B2 | which weights are evaluated: a running average of the online network's | `DQNAgent`, `train` |
 | [Dueling networks](dueling.md) | optional | the head of the network | `QNetwork` |
-| [Averaged-DQN](averaged_dqn.md) | optional | the target averages several old target networks | `DQNAgent`, `sync_target`, `td_targets` |
-| [Maxmin Q-learning](maxmin.md) | optional | two networks; the target takes their minimum | `DQNAgent`, `td_targets`, `update` |
+| [n-step returns](n_step.md) | optional | what a transition in the buffer contains | `train`, `ReplayBuffer`, `td_targets` |
+| [Prioritized replay](prioritized_replay.md) | optional | which transitions are replayed, and with what weight | `ReplayBuffer`, `update`, `train` |
+| [Noisy networks](noisy_nets.md) | optional | how the agent explores | `QNetwork`, `act`, `train` |
+
+The last four are the "Rainbow" improvements from the lecture's backup slides. They are here
+for the curious, and for whoever wants to find out why they don't help much in this world.
 
 ## Notation
 
@@ -50,7 +54,7 @@ and the loss is the Huber loss between $Q(s, a; \mathbf{w})$ and $y$, averaged o
   vanilla behaviour when it is missing.
 - **Compare against your own vanilla run**, with the same seeds. With three seeds, a
   difference smaller than about twice its standard error is not evidence of anything.
-- **Change one thing at a time.** If you tune your improvement's own hyperparameters (n, α, σ₀,
-  τ, …), give each variant its own run and write down what you tried. If you also change a
+- **Change one thing at a time.** If you tune your improvement's own hyperparameters (N, K,
+  α, τ, β, …), give each variant its own run and write down what you tried. If you also change a
   shared hyperparameter, such as the learning rate, run vanilla with the same change. Otherwise
   you cannot tell which change did the work.

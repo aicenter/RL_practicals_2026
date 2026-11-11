@@ -14,6 +14,11 @@ and $\alpha = 0.9$.
 The name refers to Baron Munchausen, who pulled himself out of a swamp by his own hair. The
 agent uses *its own policy* as an extra learning signal.
 
+**In two sentences.** The bonus term penalizes the action taken by how much worse it was than the
+best action, as the agent currently sees it. The bootstrap term is a slightly softened max. The
+two sections below explain the two terms, and they are all you need to implement the method.
+The section after them explains *why* it works, which needs ideas from later weeks.
+
 ## Ingredient 1: a soft maximum in the bootstrap (that is, "soft DQN")
 
 The last term replaces $\max_{a'} Q(s', a')$. It looks complicated but is simple. Since
@@ -50,10 +55,13 @@ and the rest (the *action gap*) grows. A larger action gap makes the argmax robu
 estimation errors no longer flip the greedy action. The idea of increasing the action gap is
 older (*advantage learning*; Bellemare et al., 2016); Munchausen gets it through the policy.
 
-The deeper reason it works, shown in the paper: the bonus makes the algorithm equivalent to
+## Why it works: a hidden KL penalty (optional)
+
+The deeper reason, shown in the paper: the bonus makes the algorithm equivalent to
 regularizing each new policy towards the previous one, with a KL penalty of weight $\alpha\tau$,
 plus an entropy bonus of weight $(1 - \alpha)\tau$. KL regularization between successive
-policies makes the errors of successive Q-estimates *average out* rather than accumulate. The
+policies makes the errors of successive Q-estimates *average out* rather than accumulate (an
+implicit cousin of what group B1's Averaged-DQN does explicitly). The
 same idea, keeping the new policy close to the old one, is at the heart of TRPO and PPO in
 Week 9.
 

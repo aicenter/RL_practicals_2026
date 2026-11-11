@@ -1,4 +1,4 @@
-# n-step returns (group A2)
+# n-step returns (optional)
 
 **In one equation.** Learn from $n$ real rewards before bootstrapping:
 

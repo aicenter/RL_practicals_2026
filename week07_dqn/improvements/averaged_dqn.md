@@ -1,4 +1,4 @@
-# Averaged-DQN
+# Averaged-DQN (group B1)
 
 **In one equation.** Bootstrap from the *average* of the last $K$ target networks:
 

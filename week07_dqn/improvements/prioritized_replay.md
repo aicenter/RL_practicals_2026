@@ -1,4 +1,4 @@
-# Prioritized experience replay (group B1)
+# Prioritized experience replay (optional)
 
 **In equations.** Replay transition $i$ with probability
 
