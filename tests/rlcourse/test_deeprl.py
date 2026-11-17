@@ -77,6 +77,7 @@ def test_config_changes_and_names():
     assert config_changes(_Config()) == {}
     assert default_name(config_changes(_Config(double=True, lr=0.01))) == "double+lr=0.01"
     assert default_name({}) == "vanilla"
+    assert default_name({}, "core") == "core"
 
 
 def test_run_experiment_saves_results(tmp_path):
@@ -92,3 +93,32 @@ def test_run_experiment_saves_results(tmp_path):
 
     plot_experiments([tmp_path])
     plot_experiments([tmp_path], metric="loss")
+
+
+def test_pg_tools_board_text_and_saving(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from torch import nn
+
+    from rlcourse.deeprl.pg_tools import board_text, load_agent, save_agent
+
+    observation, _ = make_env().reset(seed=0)
+    text = board_text(observation).splitlines()
+    assert len(text) == 8 and text[0] == "########" and "P" in text[1]
+
+    @dataclass(frozen=True)
+    class Config:
+        gamma: float = 0.99
+
+    def make_agent(config):
+        return SimpleNamespace(config=config, policy_network=nn.Linear(3, 2))
+
+    agent = make_agent(Config(gamma=0.5))
+    assert save_agent(agent, agent.config, 0) is None            # train did not ask for saving
+    monkeypatch.setenv("RLCOURSE_POLICY_DIR", str(tmp_path))
+    monkeypatch.setenv("RLCOURSE_POLICY_NAME", "core")
+    path = save_agent(agent, agent.config, 3)
+    assert path == tmp_path / "core_seed3.pt"
+    loaded = load_agent(path, make_agent, Config)
+    assert loaded.config.gamma == 0.5
+    assert torch.equal(loaded.policy_network.weight, agent.policy_network.weight)
