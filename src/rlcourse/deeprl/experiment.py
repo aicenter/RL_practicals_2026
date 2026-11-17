@@ -224,10 +224,10 @@ def config_changes(config: Any) -> dict[str, Any]:
             if getattr(config, f.name) != getattr(defaults, f.name)}
 
 
-def default_name(changes: dict[str, Any]) -> str:
-    """'vanilla', or e.g. 'double' or 'n_step=3+lr=0.001', from the changed config fields."""
+def default_name(changes: dict[str, Any], unchanged: str = "vanilla") -> str:
+    """`unchanged` ('vanilla'), or e.g. 'double' or 'n_step=3+lr=0.001', from the changed config fields."""
     if not changes:
-        return "vanilla"
+        return unchanged
     parts = [name if value is True else f"{name}={value}" for name, value in changes.items()]
     return "+".join(parts)
 
@@ -252,6 +252,7 @@ def run_experiment[ConfigT](
     nickname: str | None = None,
     files: Sequence[Path] = (),
     leaderboard_kind: str = "train",
+    unchanged_name: str = "vanilla",
 ) -> ExperimentResult:
     """Train with every seed, summarize, save to `results_dir/<name>.json`, optionally submit.
 
@@ -262,14 +263,15 @@ def run_experiment[ConfigT](
         config: a dataclass instance; fields that differ from the defaults name the experiment.
         seeds: one training run per seed.
         workers: processes to use; default: one per seed, at most (number of CPUs - 1).
-        name: the name of the results file; default: derived from the config changes.
+        name: the name of the results file; default: derived from the config changes
+            (`unchanged_name` if there are none).
         results_dir: where to save `<name>.json`; None: don't save.
         submit: send the summary (and `files`) to the course leaderboard for `week_dir`.
     """
     if not is_dataclass(config):
         raise TypeError("config must be a dataclass instance")
     changes = config_changes(config)
-    name = name or default_name(changes)
+    name = name or default_name(changes, unchanged_name)
     experiment = ExperimentResult(name=name, config=asdict(config), changes=changes)
     if workers is None:
         workers = max(1, min(len(seeds), (os.cpu_count() or 2) - 1))

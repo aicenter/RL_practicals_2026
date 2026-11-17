@@ -8,4 +8,7 @@
 - `rlcourse.deeprl.plotting`: learning curves of saved results
   (`uv run python -m rlcourse.deeprl.plotting week07_dqn/results`).
 - `rlcourse.deeprl.dqn_checks`: the checks behind `uv run python week07_dqn/dqn.py check`.
+- `rlcourse.deeprl.pg_checks`: the checks behind `uv run python week08_pg/pg.py check`.
+- `rlcourse.deeprl.pg_tools`: saving/loading trained agents, `watch`, and the gradient-variance
+  probe behind `pg.py watch` and `pg.py variance`.
 """
