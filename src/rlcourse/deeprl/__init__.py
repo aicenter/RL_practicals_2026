@@ -11,4 +11,7 @@
 - `rlcourse.deeprl.pg_checks`: the checks behind `uv run python week08_pg/pg.py check`.
 - `rlcourse.deeprl.pg_tools`: saving/loading trained agents, `watch`, and the gradient-variance
   probe behind `pg.py watch` and `pg.py variance`.
+- `rlcourse.deeprl.ppo_checks`: the checks behind `uv run python week09_ppo/ppo.py check`.
+- `rlcourse.deeprl.ppo_tools`: the diagnostics of a PPO update, group B2's training world, and
+  `score` (behind `ppo.py score`).
 """

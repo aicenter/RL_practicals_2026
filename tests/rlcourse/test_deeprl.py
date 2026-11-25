@@ -122,3 +122,41 @@ def test_pg_tools_board_text_and_saving(tmp_path, monkeypatch):
     loaded = load_agent(path, make_agent, Config)
     assert loaded.config.gamma == 0.5
     assert torch.equal(loaded.policy_network.weight, agent.policy_network.weight)
+
+
+def test_monitor_record_episode():
+    monitor = Monitor(10, 0, eval_every=10, eval_episodes=1, final_episodes=1, verbose=False)
+    monitor.record_episode(1.5)
+    monitor.record_episode(-0.5)
+    monitor.evaluate_if_due(10, lambda o: 0)
+    assert monitor.behaviour_return == [0.5]
+
+
+def test_ppo_tools_diagnostics():
+    from rlcourse.deeprl.ppo_tools import explained_variance, policy_change
+
+    target = torch.tensor([1.0, 2.0, 3.0, 4.0])
+    assert abs(explained_variance(target, target) - 1.0) < 1e-6
+    assert abs(explained_variance(torch.full((4,), 2.5), target)) < 1e-6
+    old = torch.log(torch.tensor([0.5, 0.5]))
+    new = torch.log(torch.tensor([0.5, 0.75]))
+    change = policy_change(new, old, clip_eps=0.2)
+    assert change["clip_frac"] == 0.5 and abs(change["ratio_max"] - 1.5) < 1e-6
+    assert abs(change["kl"] - (0.5 - np.log(1.5)) / 2) < 1e-6
+    assert policy_change(old, old, 0.2)["kl"] == 0.0
+
+
+def test_ppo_tools_hint_reward():
+    from rlcourse.deeprl.ppo_tools import make_training_env, next_to_pellet
+
+    plain, hinted = make_env(), make_training_env(hint_reward=0.05)
+    assert make_training_env(0.0).__class__ is plain.__class__
+    plain.reset(seed=0)
+    _, info = hinted.reset(seed=0)
+    for action in [1, 1, 2, 3, 0, 1, 2, 2]:
+        _, r_plain, term, trunc, _ = plain.step(action)
+        _, r_hinted, _, _, info = hinted.step(action)
+        assert info["true_reward"] == r_plain
+        assert abs(r_hinted - r_plain - 0.05 * next_to_pellet(info["state"])) < 1e-9
+        if term or trunc:
+            break

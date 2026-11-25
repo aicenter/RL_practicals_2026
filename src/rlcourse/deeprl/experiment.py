@@ -110,6 +110,13 @@ class Monitor:
             self._recent_returns.append(self._episode_return)
             self._episode_return = 0.0
 
+    def record_episode(self, episode_return: float) -> None:
+        """Instead of record_step: call once per finished episode, with its return. For
+        training loops that step several environments in turn (Week 9), whose rewards would
+        otherwise be mixed up into one stream."""
+        self._finished_returns.append(float(episode_return))
+        self._recent_returns.append(float(episode_return))
+
     def log(self, **scalars: float) -> None:
         """Record numbers (e.g. loss=..., epsilon=...); they are averaged between evaluations."""
         for name, value in scalars.items():
